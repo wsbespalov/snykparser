@@ -322,7 +322,8 @@ def download_and_parse_snyk_vulners():
 
     return snyk_vulners
 
-def main():
+def run():
+    # Download and parse
     snyk_vulners = download_and_parse_snyk_vulners()
     LOGINFO_IF_ENABLED()
     LOGINFO_IF_ENABLED("Complete parsing {} snyk vulners".format(len(snyk_vulners)))
@@ -342,6 +343,9 @@ def main():
         LOGERR_IF_ENABLED("Get an exception writing json file with result_json: {}".format(ex))
 
     LOGINFO_IF_ENABLED("Job complete...")
+
+def main():
+    run()
 
 
 if __name__ == "__main__":
