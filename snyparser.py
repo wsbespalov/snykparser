@@ -3,9 +3,11 @@ import re
 import sys
 import time
 import json
+import time
 import peewee
 import logging
 import requests
+from dateutil import parser
 from lxml import html
 from lxml.cssselect import CSSSelector
 from datetime import datetime
@@ -61,12 +63,12 @@ PIP = "pip"
 RUBYGEMS = "rubygems"
 
 SOURCES = [GOLANG,
-           # COMPOSER,
-           # MAVEN,
-           # NPM,
-           # NUGET,
-           # PIP,
-           # RUBYGEMS
+           COMPOSER,
+           MAVEN,
+           NPM,
+           NUGET,
+           PIP,
+           RUBYGEMS
            ]
 
 a_selector = CSSSelector('a')
@@ -149,7 +151,7 @@ def parse_page(page_tree):
         header_title_list = []
 
     if len(header_title_list) > 0:
-        header_title = header_title_list[0]
+        header_title = str(header_title_list[0])
     else:
         header_title = "unknown"
 
@@ -166,9 +168,13 @@ def parse_page(page_tree):
         affecting_list = []
 
     if len(affecting_list) >= 2:
-        affecting_github = affecting_list[2]
+        affecting_github = str(affecting_list[2])
     else:
         affecting_github = ""
+
+    affecting_github = affecting_github.replace("\n", "")
+    affecting_github = affecting_github.lstrip()
+    affecting_github = affecting_github.rstrip()
 
     LOGINFO_IF_ENABLED("AFFECTING: {}".format(affecting_github))
 
@@ -182,6 +188,10 @@ def parse_page(page_tree):
         versions = versions_list[4]
     else:
         versions = "undefined"
+
+    versions = versions.replace("\n", "")
+    versions = versions.lstrip()
+    versions = versions.rstrip()
 
     LOGINFO_IF_ENABLED("VERSIONS: {}".format(versions))
 
@@ -210,10 +220,19 @@ def parse_page(page_tree):
         elif is_remedation:
             remedation += over
 
+    if overview == "":
+        overview = "undefined"
+
     overview = overview.replace("\n", " ")
+    overview = overview.lstrip()
+    overview = overview.rstrip()
+
     remedation = remedation.replace("\n", " ")
     if remedation == "":
         remedation = "undefined"
+
+    remedation = remedation.lstrip()
+    remedation = remedation.rstrip()
 
     LOGINFO_IF_ENABLED("OVERVIEW: {}".format(overview))
     LOGINFO_IF_ENABLED("REMEDATION: {}".format(remedation))
@@ -237,11 +256,13 @@ def parse_page(page_tree):
                         if "href" in _.attrib:
                             if "http://" in _.attrib["href"] or "https://" in _.attrib["href"]:
                                 if "class" not in _.attrib:
-                                    LOGINFO_IF_ENABLED(_.text, ": ", _.attrib["href"])
-                                    references_list_ul.append({
-                                        "name": _.text,
-                                        "ref": _.attrib["href"]
-                                    })
+                                    LOGINFO_IF_ENABLED(_.text + ": " + _.attrib["href"])
+                                    references_list_ul.append(json.dumps(
+                                        {
+                                            "name": _.text,
+                                            "ref": _.attrib["href"]
+                                        }
+                                    ))
 
     try:
         card__content = page_tree.xpath('//div[@class="card__content"]')[0].xpath('//dl/dd')
@@ -249,30 +270,47 @@ def parse_page(page_tree):
         LOGERR_IF_ENABLED("Get an exception with xpath to card__content: {}".format(ex))
         card__content = []
 
-    credit = "unknown"
+    credit = "undefined"
     snyk_id = "undefined"
-    disclosed = "undefined"
-    published = "undefined"
-    if len(card__content) >=6:
-        credit = card__content[0].text.replace("\n", "").strip()
-        snyk_id = card__content[3].text.replace("\n", "").strip()
-        disclosed = card__content[4].text.replace("\n", "").strip()
-        published = card__content[5].text.replace("\n", "").strip()
+    disclosed_str = "undefined"
+    published_str = "undefined"
+    disclosed_dt = datetime.utcnow()
+    published_dt = datetime.utcnow()
+
+    if len(card__content) >= 6:
+        credit = str(card__content[0].text.replace("\n", "")).strip()
+        credit = credit.lstrip()
+        credit = credit.rstrip()
+
+        snyk_id = str(card__content[3].text.replace("\n", "")).strip()
+        snyk_id = snyk_id.lstrip()
+        snyk_id = snyk_id.rstrip()
+
+        disclosed_str = str(card__content[4].text.replace("\n", "")).strip()
+        disclosed_str = disclosed_str.lstrip()
+        disclosed_str = disclosed_str.rstrip()
+        disclosed_dt = parser.parse(disclosed_str)
+
+
+        published_str = str(card__content[5].text.replace("\n", "")).strip()
+        published_str = published_str.lstrip()
+        published_str = published_str.rstrip()
+        published_dt = parser.parse(published_str)
 
     LOGINFO_IF_ENABLED("CREDIT: {}".format(credit))
     LOGINFO_IF_ENABLED("SNYK ID: {}".format(snyk_id))
-    LOGINFO_IF_ENABLED("DISCLOSED: {}".format(disclosed))
-    LOGINFO_IF_ENABLED("PUBLISHED: {}".format(published))
+    LOGINFO_IF_ENABLED("DISCLOSED: {}".format(disclosed_dt))
+    LOGINFO_IF_ENABLED("PUBLISHED: {}".format(published_dt))
 
-    cve = ""
-    cve_url = ""
-    cwe = ""
-    cwe_url = ""
+    cve = "undefined"
+    cve_url = "undefined"
+    cwe = "undefined"
+    cwe_url = "undefined"
 
     try:
         card__content_a = page_tree.xpath('//div[@class="card__content"]')[0].xpath('//dl/dd/a')
     except Exception as ex:
-        LOGERR_IF_ENABLED("Get an exception with xpath to card__content_a: {}".format(card__content_a))
+        LOGERR_IF_ENABLED("Get an exception with xpath to card__content_a: {}".format(ex))
         card__content_a = []
 
     if len(card__content_a) >= 2:
@@ -286,10 +324,13 @@ def parse_page(page_tree):
                     i = cve_url.index("CVE-20")
                     cve = cve_url[i:]
                 except ValueError as ve:
-                    cve = ""
-
+                    cve = "undefined"
                 if not startswith(cve, "CVE-"):
-                    cve = ""
+                    cve = "undefined"
+            else:
+                cve_url = cve = "undefined"
+        else:
+            cve_url = cve = "undefined"
 
         cwe_a = card__content_a[1].attrib
         if "href" in cwe_a:
@@ -299,6 +340,12 @@ def parse_page(page_tree):
                 if cwe != "":
                     cwe = re.sub("\D", "", str(cwe))
                     cwe = "CWE-" + cwe
+                else:
+                    cwe = "undefined"
+            else:
+                cwe_url = cwe = "undefined"
+        else:
+            cwe_url = cwe = "undefined"
 
     LOGINFO_IF_ENABLED("CVE: {}".format(cve))
     LOGINFO_IF_ENABLED("CVE URL: {}".format(cve_url))
@@ -318,8 +365,8 @@ def parse_page(page_tree):
         cwe_url=cwe_url,
         credit=credit,
         snyk_id=snyk_id,
-        disclosed=disclosed,
-        published=published,
+        disclosed=disclosed_str,
+        published=published_str,
         source="",
         source_url="",
         type=""
@@ -419,8 +466,11 @@ def create_snyk_item_in_postgres(item_in_json):
     connect_database()
     sid = 0
 
-
     # TODO: Clearup all fields lstrip/rstrip
+
+    item_in_json["disclosed"] = datetime.utcnow() if item_in_json["disclosed"] == "undefined" else item_in_json["disclosed"]
+    item_in_json["published"] = datetime.utcnow() if item_in_json["published"] == "undefined" else item_in_json["published"]
+
 
     snyk = SNYK(
         type=str(item_in_json["type"]),
@@ -447,6 +497,26 @@ def create_snyk_item_in_postgres(item_in_json):
 
 def update_snyk_item_in_postgres(item_in_json, sid):
     connect_database()
+
+    snyk = SNYK.get_by_id(sid)
+
+    snyk.type = item_in_json["type"]
+    snyk.cve_id = item_in_json["cve_id"]
+    snyk.cve_url = item_in_json["cve_url"]
+    snyk.cwe_id = item_in_json["cwe_id"]
+    snyk.cwe_url = item_in_json["cwe_url"]
+    snyk.header_title = item_in_json["header_title"]
+    snyk.affecting_github = item_in_json["affecting_github"]
+    snyk.versions = item_in_json["versions"]
+    snyk.overview = item_in_json["overview"]
+    snyk.references = item_in_json["references"]
+    snyk.credit = item_in_json["credit"]
+    snyk.snyk_id = item_in_json["snyk_id"]
+    snyk.source = item_in_json["source"]
+    snyk.source_url = item_in_json["source_url"]
+    snyk.disclosed = item_in_json["disclosed"]
+    snyk.published = item_in_json["published"]
+    snyk.save()
 
     disconnect_database()
 
@@ -491,12 +561,13 @@ def run():
 
 
     drop_snyk_table()
+    create_snyk_table()
+
+    start_time = time.time()
 
 
-
-
-    # Download and parse
     snyk_vulners = download_and_parse_snyk_vulners()
+
     LOGINFO_IF_ENABLED()
     LOGINFO_IF_ENABLED("Complete parsing {} snyk vulners".format(len(snyk_vulners)))
     LOGINFO_IF_ENABLED()
@@ -516,12 +587,11 @@ def run():
 
     LOGINFO_IF_ENABLED("Create or update SNYK items in postgres")
 
-    create_snyk_table()
-
     created, updated = create_or_update_snyk_items_in_postgres(snyk_vulners)
+
     LOGINFO_IF_ENABLED("Create {} items, update {} SNYK items in postgres".format(len(created), len(updated)))
 
-    LOGINFO_IF_ENABLED("Job complete...")
+    LOGINFO_IF_ENABLED("Job complete at {} sec".format(time.time() - start_time))
 
 def main():
     run()
