@@ -11,4 +11,5 @@ SETTINGS = {
     "enable_results_logging": False,
     "enable_exception_logging": True,
     "json_filename": "snyk.json",
+    "drop_snyk_table_before": True
 }

@@ -26,6 +26,8 @@ enable_extra_logging = SETTINGS.get("enable_extra_logging", False)
 enable_results_logging = SETTINGS.get("enable_results_logging", False)
 enable_exception_logging = SETTINGS.get("enable_exception_logging", True)
 
+drop_snyk_table_before = SETTINGS.get("drop_snyk_table_before", False)
+
 POSTGRES = SETTINGS.get("postgres", {})
 
 pg_default_database = POSTGRES.get("database", "updater_db")
@@ -681,13 +683,14 @@ def update_snyk_vulners():
         LOGINFO_IF_ENABLED("[+] Complete updating {} Snyk vulnerabilities at {} sec.".format(len(created_snyk_vulners), time.time() - start_time))
         return True, created_snyk_vulners
 
+
 def run():
-    drop_snyk_table()
-    create_snyk_table()
+    if drop_snyk_table_before:
+        drop_snyk_table()
+        create_snyk_table()
 
     populate_snyk_vulners()
     update_snyk_vulners()
-    pass
 
 
 def main():
