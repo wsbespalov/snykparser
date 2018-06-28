@@ -34,7 +34,7 @@ class SNYK(peewee.Model):
     class Meta:
         database = database
         ordering = ("cve_id", )
-        table_name = "snyk"
+        table_name = "vulnerabilities_snyk"
         
     id = peewee.PrimaryKeyField(null=False)
     type = peewee.TextField(default="", verbose_name="Vulnerability type")
