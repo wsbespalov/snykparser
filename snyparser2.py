@@ -101,7 +101,7 @@ def create_url(num, lang):
     page_url = "https://snyk.io/vuln/page/{}?type={}".format(
         num, lang
     )
-    LOGINFO_IF_ENABLED('[+] Get url: {}'.format(page_url))
+    LOGINFO_IF_ENABLED('Get url: {}'.format(page_url))
     return page_url
 
 
@@ -131,15 +131,15 @@ def filter_vuln_links(links):
 def download_page_from_url(page_url):
     try:
         page = requests.get(page_url, headers=headers)
-        LOGINFO_IF_ENABLED('[+] Response code: {}'.format(page.status_code))
+        LOGINFO_IF_ENABLED('Response code: {}'.format(page.status_code))
         if page.status_code == 200:
             try:
                 tree = html.fromstring(page.content)
                 return tree
             except Exception as ex:
-                LOGERR_IF_ENABLED("[-] Get an exception with download page from url: {}".format(ex))
+                LOGERR_IF_ENABLED("Get an exception with download page from url: {}".format(ex))
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with requests get operation: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with requests get operation: {}".format(ex))
     return None
 
 
@@ -147,7 +147,7 @@ def parse_page(page_tree):
     try:
         header_title_list = page_tree.xpath('//span[@class="header__title__text"]/text()')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to header_title_list: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to header_title_list: {}".format(ex))
         header_title_list = []
 
     if len(header_title_list) > 0:
@@ -159,12 +159,12 @@ def parse_page(page_tree):
     header_title = header_title.lstrip()
     header_title = header_title.rstrip()
 
-    LOGINFO_IF_ENABLED("[v] TITLE: {}".format(header_title))
+    LOGINFO_IF_ENABLED("TITLE: {}".format(header_title))
 
     try:
         affecting_list = page_tree.xpath('//a[@class="breadcrumbs__list-item__link"]/text()')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to affecting_list: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to affecting_list: {}".format(ex))
         affecting_list = []
 
     if len(affecting_list) >= 2:
@@ -176,12 +176,12 @@ def parse_page(page_tree):
     affecting_github = affecting_github.lstrip()
     affecting_github = affecting_github.rstrip()
 
-    LOGINFO_IF_ENABLED("[v] AFFECTING: {}".format(affecting_github))
+    LOGINFO_IF_ENABLED("AFFECTING: {}".format(affecting_github))
 
     try:
         versions_list = page_tree.xpath('//p[@class="header__lede"]//text()')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to versions_list: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to versions_list: {}".format(ex))
         versions_list = []
 
     if len(versions_list) >= 5:
@@ -193,75 +193,57 @@ def parse_page(page_tree):
     versions = versions.lstrip()
     versions = versions.rstrip()
 
-    LOGINFO_IF_ENABLED("[v] VERSIONS: {}".format(versions))
+    LOGINFO_IF_ENABLED("VERSIONS: {}".format(versions))
 
     try:
         overview_list = page_tree.xpath('//div[@class="card card--markdown"]//text()')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to overview_list: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to overview_list: {}".format(ex))
         overview_list = []
 
     overview = ""
     is_overview = False
     remedation = ""
     is_remedation = False
-    details = ""
-    is_details = False
     for over in overview_list:
         if over == "Overview":
             is_overview = True
             is_remedation = False
-            is_details = False
             continue
         elif over == "Remediation":
             is_overview = False
             is_remedation = True
-            is_details = False
             continue
-        elif over == "Details":
-            is_overview = False
-            is_remedation = False
-            is_details = True
 
         if is_overview:
             overview += over
         elif is_remedation:
             remedation += over
-        elif is_details:
-            details += over
 
     if overview == "":
         overview = "undefined"
 
     overview = overview.replace("\n", " ")
-    if overview == "":
-        overview = "undefined"
     overview = overview.lstrip()
     overview = overview.rstrip()
 
     remedation = remedation.replace("\n", " ")
     if remedation == "":
         remedation = "undefined"
+
     remedation = remedation.lstrip()
     remedation = remedation.rstrip()
 
-    details = details.replace("\n", " ")
-    if details == "":
-        details = "undefined"
-    details = details.lstrip()
-    details = details.rstrip()
-
-    LOGINFO_IF_ENABLED("[v] OVERVIEW: {}".format(overview))
-    LOGINFO_IF_ENABLED("[v] REMEDATION: {}".format(remedation))
-    LOGINFO_IF_ENABLED("[v] DETAILS: {}".format(details))
+    LOGINFO_IF_ENABLED("OVERVIEW: {}".format(overview))
+    LOGINFO_IF_ENABLED("REMEDATION: {}".format(remedation))
 
     references_list_ul = []
 
-    LOGINFO_IF_ENABLED("[v] REFERENCES:")
+    LOGINFO_IF_ENABLED("REFERENCES:")
     try:
         r = page_tree.xpath('//h2[@id="references"]')[0].getnext().xpath('//li//a')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to references_list_ul: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to references_list_ul: {}".format(ex))
         r = None
 
     if r is None:
@@ -274,7 +256,7 @@ def parse_page(page_tree):
                         if "href" in _.attrib:
                             if "http://" in _.attrib["href"] or "https://" in _.attrib["href"]:
                                 if "class" not in _.attrib:
-                                    LOGINFO_IF_ENABLED("[v] " +_.text + ": " + _.attrib["href"])
+                                    LOGINFO_IF_ENABLED(_.text + ": " + _.attrib["href"])
                                     references_list_ul.append(json.dumps(
                                         {
                                             "name": _.text,
@@ -285,7 +267,7 @@ def parse_page(page_tree):
     try:
         card__content = page_tree.xpath('//div[@class="card__content"]')[0].xpath('//dl/dd')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to card__content: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to card__content: {}".format(ex))
         card__content = []
 
     credit = "undefined"
@@ -315,10 +297,10 @@ def parse_page(page_tree):
         published_str = published_str.rstrip()
         published_dt = parser.parse(published_str)
 
-    LOGINFO_IF_ENABLED("[v] CREDIT: {}".format(credit))
-    LOGINFO_IF_ENABLED("[v] SNYK ID: {}".format(snyk_id))
-    LOGINFO_IF_ENABLED("[v] DISCLOSED: {}".format(disclosed_dt))
-    LOGINFO_IF_ENABLED("[v] PUBLISHED: {}".format(published_dt))
+    LOGINFO_IF_ENABLED("CREDIT: {}".format(credit))
+    LOGINFO_IF_ENABLED("SNYK ID: {}".format(snyk_id))
+    LOGINFO_IF_ENABLED("DISCLOSED: {}".format(disclosed_dt))
+    LOGINFO_IF_ENABLED("PUBLISHED: {}".format(published_dt))
 
     cve = "undefined"
     cve_url = "undefined"
@@ -328,7 +310,7 @@ def parse_page(page_tree):
     try:
         card__content_a = page_tree.xpath('//div[@class="card__content"]')[0].xpath('//dl/dd/a')
     except Exception as ex:
-        LOGERR_IF_ENABLED("[-] Get an exception with xpath to card__content_a: {}".format(ex))
+        LOGERR_IF_ENABLED("Get an exception with xpath to card__content_a: {}".format(ex))
         card__content_a = []
 
     if len(card__content_a) >= 2:
@@ -365,18 +347,17 @@ def parse_page(page_tree):
         else:
             cwe_url = cwe = "undefined"
 
-    LOGINFO_IF_ENABLED("[v] CVE: {}".format(cve))
-    LOGINFO_IF_ENABLED("[v] CVE URL: {}".format(cve_url))
+    LOGINFO_IF_ENABLED("CVE: {}".format(cve))
+    LOGINFO_IF_ENABLED("CVE URL: {}".format(cve_url))
 
-    LOGINFO_IF_ENABLED("[v] CWE: {}".format(cwe))
-    LOGINFO_IF_ENABLED("[v] CWE URL: {}".format(cwe_url))
+    LOGINFO_IF_ENABLED("CWE: {}".format(cwe))
+    LOGINFO_IF_ENABLED("CWE URL: {}".format(cwe_url))
 
     return dict(
         header_title=header_title,
         affecting_github=affecting_github,
         versions=versions,
         overview=overview,
-        details=details,
         references=references_list_ul,
         cve_id=cve,
         cve_url=cve_url,
@@ -391,9 +372,65 @@ def parse_page(page_tree):
         type=""
     )
 
+
+def download_and_parse_snyk_vulners():
+    snyk_vulners = []
+
+    LOGINFO_IF_ENABLED("Snyk parser started...")
+    for source in SOURCES:
+
+        work = True
+        num = 1
+
+        LOGINFO_IF_ENABLED()
+        LOGINFO_IF_ENABLED("Process source `{}`".format(source))
+        LOGINFO_IF_ENABLED()
+
+        while work:
+            LOGINFO_IF_ENABLED()
+            LOGINFO_IF_ENABLED("Process page num {}".format(num))
+            LOGINFO_IF_ENABLED()
+
+            page_url = create_url(num, source)
+            tree = download_page_from_url(page_url)
+            if tree is not None:
+                try:
+                    f = a_selector(tree)
+                    links = [e.get('href') for e in f]
+                    filtered_links, cnt = filter_vuln_links(links)
+                    LOGINFO_IF_ENABLED("Get {} valid snyk links from page".format(cnt))
+                except Exception as ex:
+                    LOGERR_IF_ENABLED("Get an exception with tree parsing: {}".format(ex))
+                    sys.exit(1)
+
+            if len(filtered_links) == 0:
+                LOGINFO_IF_ENABLED()
+                LOGINFO_IF_ENABLED("Complete parsing source `{}`".format(source))
+                LOGINFO_IF_ENABLED()
+                work = False
+            else:
+                for pn in range(len(filtered_links)):
+                    LOGINFO_IF_ENABLED()
+                    LOGINFO_IF_ENABLED("Parse vulner # {}".format(pn))
+                    LOGINFO_IF_ENABLED()
+                    d_url = "".join(["https://snyk.io", filtered_links[pn]])
+                    page_tree = download_page_from_url(d_url)
+                    if page_tree is not None:
+                        parsed_page = parse_page(page_tree)
+                        parsed_page["source"] = "snyk"
+                        parsed_page["source_url"] = d_url
+                        parsed_page["type"] = source
+                        snyk_vulners.append(parsed_page)
+
+            num += 1
+
+        LOGINFO_IF_ENABLED("Pause...")
+        time.sleep(5)
+
+    return snyk_vulners
+
 def connect_database():
     try:
-        peewee.logger.disabled = True
         if database.is_closed():
             database.connect()
         else:
@@ -412,32 +449,18 @@ def disconnect_database():
         else:
             database.close()
         LOGVAR_IF_ENABLED("[+] Disconnect Postgress database")
-        peewee.logger.disabled = False
         return True
     except peewee.OperationalError as peewee_operational_error:
         LOGERR_IF_ENABLED("[-] Disconnect Postgres database error: {}".format(peewee_operational_error))
-    peewee.logger.disabled = False
     return False
 
 def drop_snyk_table():
-    connect_database()
     if SNYK.table_exists():
         SNYK.drop_table()
-    disconnect_database()
 
 def create_snyk_table():
-    connect_database()
     if not SNYK.table_exists():
         SNYK.create_table()
-    disconnect_database()
-
-def count_snyk_table():
-    connect_database()
-    count = SNYK.select().count()
-    if count:
-        disconnect_database()
-        return count
-    return 0
 
 def create_snyk_item_in_postgres(item_in_json):
     connect_database()
@@ -459,7 +482,6 @@ def create_snyk_item_in_postgres(item_in_json):
         affecting_github=str(item_in_json["affecting_github"]),
         versions=str(item_in_json["versions"]),
         overview=str(item_in_json["overview"]),
-        details=str(item_in_json["details"]),
         references=str(item_in_json["references"]),
         credit=str(item_in_json["credit"]),
         snyk_id=str(item_in_json["snyk_id"]),
@@ -489,7 +511,6 @@ def update_snyk_item_in_postgres(item_in_json, sid):
         snyk.affecting_github != item_in_json["affecting_github"] or \
         snyk.versions != item_in_json["versions"] or \
         snyk.overview != item_in_json["overview"] or \
-        snyk.details != item_in_json["details"] or \
         snyk.references != item_in_json["references"] or \
         snyk.credit != item_in_json["credit"] or \
         snyk.snyk_id != item_in_json["snyk_id"] or \
@@ -509,7 +530,6 @@ def update_snyk_item_in_postgres(item_in_json, sid):
         snyk.affecting_github = item_in_json["affecting_github"]
         snyk.versions = item_in_json["versions"]
         snyk.overview = item_in_json["overview"]
-        snyk.details = item_in_json["details"]
         snyk.references = item_in_json["references"]
         snyk.credit = item_in_json["credit"]
         snyk.snyk_id = item_in_json["snyk_id"]
@@ -518,26 +538,24 @@ def update_snyk_item_in_postgres(item_in_json, sid):
         snyk.disclosed = item_in_json["disclosed"]
         snyk.published = item_in_json["published"]
         snyk.save()
-        disconnect_database()
         return True
     else:
-        disconnect_database()
         return False
+
+    disconnect_database()
 
 def check_if_snyk_item_exists_in_postgres(item_in_json):
     connect_database()
-    sid = -1
+    sid = 0
     snyks = []
 
-    # if "cve_id" in item_in_json and "header_title" in item_in_json:
-        # cve_id = item_in_json["cve_id"]
-        # header_title = item_in_json["header_title"]
-    if "snyk_id" in item_in_json:
-        snyk_id = item_in_json["snyk_id"]
+    if "cve_id" in item_in_json and "header_title" in item_in_json:
+        cve_id = item_in_json["cve_id"]
+        header_title = item_in_json["header_title"]
+        credit = item_in_json["credit"]
         snyks = list(
             SNYK.select().where(
-                # (SNYK.cve_id == cve_id) & (SNYK.header_title == header_title) & (SNYK.snyk_id == snyk_id)
-                (SNYK.snyk_id == snyk_id)
+                (SNYK.cve_id == cve_id) & (SNYK.header_title == header_title) & (SNYK.credit == credit)
             )
         )
 
@@ -554,6 +572,7 @@ def create_or_update_snyk_items_in_postgres(items_in_json):
     updated = []
     skipped = []
     for item in items_in_json:
+        sid = 0
         exists, sid = check_if_snyk_item_exists_in_postgres(item)
         if exists:
             modified = update_snyk_item_in_postgres(item, sid)
@@ -567,130 +586,40 @@ def create_or_update_snyk_items_in_postgres(items_in_json):
     return created, updated, skipped
 
 
-def create_or_update_one_snyk_item_in_postgres(item_in_json):
-    exists, sid = check_if_snyk_item_exists_in_postgres(item_in_json)
-    if not exists and sid == -1:
-        sid = create_snyk_item_in_postgres(item_in_json)
-        return "created"
-    else:
-        modified = update_snyk_item_in_postgres(item_in_json, sid)
-        if modified:
-            return "modified"
-        else:
-            return "skipped"
-
-
-def populate_snyk_vulners():
-    count = count_snyk_table()
-
-    if count == 0:
-        LOGINFO_IF_ENABLED("[+] Start populating Snyk vulnerabilities")
-        start_time = time.time()
-        drop_snyk_table()
-        create_snyk_table()
-        snyk_count = 0
-        for source in SOURCES:
-            continue_work = True
-            page_number = 1
-            LOGINFO_IF_ENABLED("[+] Process source `{}`".format(source))
-            while continue_work:
-                LOGINFO_IF_ENABLED("[+] Process page # {}".format(page_number))
-                page_url = create_url(page_number, source)
-                tree = download_page_from_url(page_url)
-                if tree is not None:
-                    try:
-                        f = a_selector(tree)
-                        links = [e.get('href') for e in f]
-                        filtered_links, cnt = filter_vuln_links(links)
-                        LOGINFO_IF_ENABLED("[+] Get {} valid snyk links from page".format(cnt))
-                    except Exception as ex:
-                        LOGERR_IF_ENABLED("[-] Get an exception with tree parsing: {}".format(ex))
-                        return False
-                if len(filtered_links) == 0:
-                    LOGINFO_IF_ENABLED("[+] Complete parsing source `{}`".format(source))
-                    continue_work = False
-                else:
-                    for pn in range(len(filtered_links)):
-                        LOGINFO_IF_ENABLED("[+] Parse vulner # {}".format(pn))
-                        d_url = "".join(["https://snyk.io", filtered_links[pn]])
-                        page_tree = download_page_from_url(d_url)
-                        if page_tree is not None:
-                            snyk_vulner = parse_page(page_tree)
-                            snyk_vulner["source"] = "snyk"
-                            snyk_vulner["source_url"] = d_url
-                            snyk_vulner["type"] = source
-
-                            result = create_or_update_one_snyk_item_in_postgres(snyk_vulner)
-                            snyk_count += 1
-
-                page_number += 1
-
-        LOGINFO_IF_ENABLED("[+] Complete populating {} Snyk vulnerabilities at {} sec.".format(snyk_count, time.time() - start_time))
-        return True
-    else:
-        LOGINFO_IF_ENABLED("[-] You want populate Snyk vulnerabilities, but Snyk table is not empty.")
-        return False
-
-def update_snyk_vulners():
-    count = count_snyk_table()
-    if count == 0:
-        LOGINFO_IF_ENABLED("[-] You want populate Snyk vulnerabilities, but Snyk table is empty. Needs to populate it.")
-        return False, []
-    else:
-        start_time = time.time()
-        created_snyk_vulners = []
-        for source in SOURCES:
-            continue_work = True
-            page_number = 1
-            LOGINFO_IF_ENABLED("[+] Process source `{}`".format(source))
-            while continue_work:
-                LOGINFO_IF_ENABLED("[+] Process page # {}".format(page_number))
-                page_url = create_url(page_number, source)
-                tree = download_page_from_url(page_url)
-                if tree is not None:
-                    try:
-                        f = a_selector(tree)
-                        links = [e.get('href') for e in f]
-                        filtered_links, cnt = filter_vuln_links(links)
-                        LOGINFO_IF_ENABLED("[+] Get {} valid snyk links from page".format(cnt))
-                    except Exception as ex:
-                        LOGERR_IF_ENABLED("[-] Get an exception with tree parsing: {}".format(ex))
-                        return False, []
-                if len(filtered_links) == 0:
-                    LOGINFO_IF_ENABLED("[+] Complete parsing source `{}`".format(source))
-                    continue_work = False
-                else:
-                    for pn in range(len(filtered_links)):
-                        LOGINFO_IF_ENABLED("[+] Parse vulner # {}".format(pn))
-                        d_url = "".join(["https://snyk.io", filtered_links[pn]])
-                        page_tree = download_page_from_url(d_url)
-                        if page_tree is not None:
-                            snyk_vulner = parse_page(page_tree)
-                            snyk_vulner["source"] = "snyk"
-                            snyk_vulner["source_url"] = d_url
-                            snyk_vulner["type"] = source
-
-                            exists, sid = check_if_snyk_item_exists_in_postgres(snyk_vulner)
-
-                            if exists and sid != -1:
-                                continue_work = False
-                            elif not exists and sid == -1:
-                                created_snyk_vulners.append(snyk_vulner)
-                                result = create_or_update_one_snyk_item_in_postgres(snyk_vulner)
-                                LOGINFO_IF_ENABLED("[F] Find new Snyk vulnerability: {}".format(snyk_vulner["header_title"]))
-                page_number += 1
-
-        LOGINFO_IF_ENABLED("[+] Complete updating {} Snyk vulnerabilities at {} sec.".format(len(created_snyk_vulners), time.time() - start_time))
-        return True, created_snyk_vulners
-
 def run():
+
     drop_snyk_table()
     create_snyk_table()
 
-    populate_snyk_vulners()
-    update_snyk_vulners()
-    pass
+    start_time = time.time()
 
+
+    snyk_vulners = download_and_parse_snyk_vulners()
+
+    LOGINFO_IF_ENABLED()
+    LOGINFO_IF_ENABLED("Complete parsing {} snyk vulners".format(len(snyk_vulners)))
+    LOGINFO_IF_ENABLED()
+
+    result_json = dict(
+        source="https://snyk.io",
+        datetime=str(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")),
+        data=snyk_vulners
+    )
+
+    try:
+        with open(json_filename, 'w') as jf:
+            json.dump(result_json, jf, default=set_default)
+        LOGINFO_IF_ENABLED("File {} with result_json was dumped".format(json_filename))
+    except Exception as ex:
+        LOGERR_IF_ENABLED("Get an exception writing json file with result_json: {}".format(ex))
+
+    LOGINFO_IF_ENABLED("Create or update SNYK items in postgres")
+
+    created, updated, skipped = create_or_update_snyk_items_in_postgres(snyk_vulners)
+
+    LOGINFO_IF_ENABLED("Create {} items, update {} and skip {} SNYK items in postgres".format(len(created), len(updated), len(skipped)))
+
+    LOGINFO_IF_ENABLED("Job complete at {} sec".format(time.time() - start_time))
 
 def main():
     run()

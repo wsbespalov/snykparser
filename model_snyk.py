@@ -46,6 +46,7 @@ class SNYK(peewee.Model):
     affecting_github = peewee.TextField(default="", verbose_name="Affecting Github")
     versions = peewee.TextField(default="", verbose_name="Versions")
     overview = peewee.TextField(default="", verbose_name="Overview")
+    details = peewee.TextField(default="", verbose_name="Details")
     references = ArrayField(peewee.TextField, default=[], verbose_name="References", index=False)
     credit = peewee.TextField(default="", verbose_name="Cerdit")
     snyk_id = peewee.TextField(default="", verbose_name="Snyk DB ID")
@@ -73,6 +74,7 @@ class SNYK(peewee.Model):
             affecting_github=self.affecting_github,
             versions=self.versions,
             overview=self.overview,
+            details=self.details,
             references=self.references,
             credit=self.credit,
             snyk_id=self.snyk_id,
