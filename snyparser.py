@@ -437,6 +437,7 @@ def count_snyk_table():
     if count:
         disconnect_database()
         return count
+    disconnect_database()
     return 0
 
 def create_snyk_item_in_postgres(item_in_json):
